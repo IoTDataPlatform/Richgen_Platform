@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="rich-flink-consumer" external.linked.project.path="$MODULE_DIR$/rich-flink-consumer" external.root.project.path="$MODULE_DIR$/rich-flink-consumer" external.system.id="GRADLE" external.system.module.group="iot.data.platform" external.system.module.version="1.0" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_17" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/rich-flink-consumer">
+      <excludeFolder url="file://$MODULE_DIR$/rich-flink-consumer/.gradle" />
+      <excludeFolder url="file://$MODULE_DIR$/rich-flink-consumer/build" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '9.2.2'
+    id 'application'
+}
+
+group = 'iot.data.platform'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://packages.confluent.io/maven"
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation "org.eclipse.jetty:jetty-server:9.4.54.v20240208"
+    implementation "org.eclipse.jetty:jetty-servlet:9.4.54.v20240208"
+    implementation "org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.54.v20240208"
+
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.17.2"
+    implementation "javax.websocket:javax.websocket-api:1.1"
+}
+
+tasks.named('shadowJar') {
+    archiveBaseName.set('rich-websocket')
+    archiveClassifier.set('')
+}
