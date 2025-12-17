@@ -1,0 +1,5 @@
+rootProject.name = "Richgen_Platform"
+
+include("rich-flink-consumer")
+include("rich-gen")
+include("rich-websocket")
