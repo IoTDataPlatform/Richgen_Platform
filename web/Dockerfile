@@ -1,4 +1,4 @@
-# --- stage 1: build ---
+
 FROM node:20-alpine AS build
 
 WORKDIR /app
@@ -9,15 +9,15 @@ RUN npm ci
 COPY . .
 
 
-RUN npm run build   # или npm run build:prod, как у тебя принято
+RUN npm run build
 
-# --- stage 2: serve static via nginx ---
+
 FROM nginx:alpine
 
-# удаляем дефолтный конфиг, если нужен свой — можно скопировать
+
 RUN rm /etc/nginx/conf.d/default.conf
 
-# простой конфиг под SPA
+
 RUN printf 'server {\n\
     listen 80;\n\
     server_name _;\n\
