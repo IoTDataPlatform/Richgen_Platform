@@ -28,11 +28,12 @@ dependencies {
     compileOnly "org.apache.flink:flink-streaming-java:1.19.1"
     compileOnly "org.apache.flink:flink-clients:1.19.1"
     compileOnly "org.apache.flink:flink-connector-kafka:3.2.0-1.19"
+    compileOnly "org.apache.flink:flink-connector-jdbc:3.2.0-1.19"
+
+    compileOnly "org.postgresql:postgresql:42.7.4"
 
     implementation "org.slf4j:slf4j-api:1.7.36"
-
     implementation "com.fasterxml.jackson.core:jackson-databind:2.17.2"
-
     implementation "javax.websocket:javax.websocket-api:1.1"
     implementation "org.glassfish.tyrus.bundles:tyrus-standalone-client:1.20"
 }

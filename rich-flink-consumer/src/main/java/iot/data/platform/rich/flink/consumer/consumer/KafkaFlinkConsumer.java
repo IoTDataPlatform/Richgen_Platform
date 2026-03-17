@@ -1,5 +1,12 @@
 package iot.data.platform.rich.flink.consumer.consumer;
 
+import iot.data.platform.rich.flink.consumer.db.PostgresSinks;
+import iot.data.platform.rich.flink.consumer.db.TrackStatsRecord;
+import iot.data.platform.rich.flink.consumer.rich.RichHit;
+import iot.data.platform.rich.flink.consumer.rich.RichHitDeserializer;
+import iot.data.platform.rich.flink.consumer.rich.Track;
+import iot.data.platform.rich.flink.consumer.rich.TrackDeserializer;
+import iot.data.platform.rich.flink.consumer.web.WebSocketSink;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -13,11 +20,6 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import iot.data.platform.rich.flink.consumer.rich.RichHit;
-import iot.data.platform.rich.flink.consumer.rich.RichHitDeserializer;
-import iot.data.platform.rich.flink.consumer.rich.Track;
-import iot.data.platform.rich.flink.consumer.rich.TrackDeserializer;
-import iot.data.platform.rich.flink.consumer.web.WebSocketSink;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -47,6 +49,7 @@ public class KafkaFlinkConsumer {
                 new RichHitDeserializer(),
                 properties
         );
+
         DataStream<RichHit> hitDataStream = env
                 .addSource(hitConsumer)
                 .assignTimestampsAndWatermarks(
@@ -60,6 +63,7 @@ public class KafkaFlinkConsumer {
                 new TrackDeserializer(),
                 properties
         );
+
         DataStream<Track> trackDataStream = env
                 .addSource(trackConsumer)
                 .assignTimestampsAndWatermarks(
@@ -67,6 +71,10 @@ public class KafkaFlinkConsumer {
                                 .<Track>forBoundedOutOfOrderness(Duration.ofSeconds(1000000))
                                 .withTimestampAssigner((track, ts) -> convertToNanoseconds(track.timeSec, track.timeNanosec))
                 );
+
+        trackDataStream
+                .addSink(PostgresSinks.createTrackSink())
+                .name("postgres-tracks-sink");
 
         DataStream<Tuple2<Track, RichHit>> joinedStream = trackDataStream
                 .keyBy(track -> 1)
@@ -93,7 +101,14 @@ public class KafkaFlinkConsumer {
                 .connect(signalHitsStream.keyBy(hit -> hit.ix + "_" + hit.iy + "_" + hit.timeSec + "_" + hit.timeNanosec))
                 .process(new DeduplicateRichHitsFunction());
 
-        finalHitStream.addSink(new WebSocketSink());
+        finalHitStream
+                .addSink(new WebSocketSink())
+                .name("websocket-sink");
+
+        finalHitStream
+                .addSink(PostgresSinks.createRichHitSink())
+                .name("postgres-rich-hits-sink");
+
 
         DataStream<Tuple2<Track, List<RichHit>>> trackWithHitsStream = joinedStream
                 .keyBy(value -> value.f0.toString())
@@ -148,6 +163,17 @@ public class KafkaFlinkConsumer {
                         return Tuple2.of(a.f0 + b.f0, a.f1 + b.f1);
                     }
                 });
+
+        DataStream<TrackStatsRecord> trackStatsRecordStream = trackStatsStream
+                .map(stats -> new TrackStatsRecord(
+                        System.currentTimeMillis(),
+                        stats.f0,
+                        stats.f1
+                ));
+
+        trackStatsRecordStream
+                .addSink(PostgresSinks.createTrackStatsSink())
+                .name("postgres-track-stats-sink");
 
         trackStatsStream
                 .map(stats -> "Tracks: " + stats.f0 + " | Avg hits per track: " + stats.f1)

@@ -115,10 +115,51 @@ services:
       - "5173:80"
     restart: unless-stopped
 
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: richdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - rich-postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d richdb" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+
+  track-link-refresher:
+    image: postgres:16-alpine
+    container_name: track-link-refresher
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./postgres/link-refresh.sql:/scripts/link-refresh.sql:ro
+    environment:
+      PGPASSWORD: postgres
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          psql -h postgres -U postgres -d richdb -f /scripts/link-refresh.sql
+          sleep 5
+        done
+    restart: unless-stopped
+
   flink-jobmanager:
     image: flink:1.19.1-java17
     container_name: flink-jobmanager
-    entrypoint: ["/opt/flink/bin/flink-start.sh"]
+    entrypoint: [ "/opt/flink/bin/flink-start.sh" ]
     ports:
       - "8180:8081"
     environment:
@@ -128,6 +169,9 @@ services:
         rest.port: 8081
         taskmanager.numberOfTaskSlots: 4
         parallelism.default: 2
+      - POSTGRES_JDBC_URL=jdbc:postgresql://postgres:5432/richdb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
       - ./flink-lib/flink-connector-kafka-3.2.0-1.19.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.19.jar:ro
       - ./flink-lib/flink-avro-1.19.1.jar:/opt/flink/lib/flink-avro-1.19.1.jar:ro
@@ -153,6 +197,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
 
   flink-taskmanager:
     image: flink:1.19.1-java17
@@ -163,6 +209,9 @@ services:
         FLINK_PROPERTIES=
         jobmanager.rpc.address: flink-jobmanager
         taskmanager.numberOfTaskSlots: 4
+      - POSTGRES_JDBC_URL=jdbc:postgresql://postgres:5432/richdb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
       - ./flink-lib/flink-connector-kafka-3.2.0-1.19.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.19.jar:ro
       - ./flink-lib/flink-avro-1.19.1.jar:/opt/flink/lib/flink-avro-1.19.1.jar:ro
@@ -187,3 +236,4 @@ services:
 
 volumes:
   kafka-data:
+  rich-postgres-data:
